@@ -1,7 +1,7 @@
 ---
 title: "Week 1 Exercises"
-author: "Jeremiah Lowhorn"
-date: "May 9, 2022"
+author: "Adeline Casali"
+date: "July 8, 2023"
 output: pdf_document
 ---
 
@@ -11,8 +11,9 @@ Please complete all exercises below WITHOUT using any libraries/packages.
 Assign 10 to the variable x. Assign 5 to the variable y. Assign 20 to the variable z.
 
 ```{r ex1}
-#your code below
-
+x <- 10
+y <- 5
+z <- 20
 ```
 
 
@@ -22,8 +23,7 @@ Show that x is less than z but greater than y.
 **Note: your output must be a SINGLE boolean, do not output a boolean for each expression.**
 
 ```{r ex2}
-#your code below
-
+(x < z) && (x > y)
 ```
 
 # Exercise 3
@@ -32,8 +32,7 @@ Show that x and y do not equal z.
 **Note: your output must be a SINGLE boolean, do not output a boolean for each expression.**
 
 ```{r ex3}
-#your code here
-
+(x != z) | (y != z)
 ```
 
 
@@ -43,8 +42,7 @@ Show that the formula `x + 2y = z`.
 **Note: your output must be a SINGLE boolean**
 
 ```{r ex4}
-#your code below
-
+(x + (2*y)) == z
 ```
 
 # Exercise 5
@@ -55,8 +53,7 @@ I have created a vector (test_vector) of integers for you. Determine if any of x
 
 ```{r ex5}
 test_vector <- c(1,5,11:22)
-#your code below
-
+x | y | z %in% test_vector
 ```
 
 # Exercise 6
@@ -64,7 +61,6 @@ Show which value is contained in the test vector. To do this you will need to cr
 **Note: your output should be two integers**
 
 ```{r ex6}
-#your code below
-
+test_vector[(x == test_vector) | (y == test_vector) | (z == test_vector)]
 ```
 
