@@ -1,7 +1,7 @@
 ---
 title: "Week 3 Exercises"
-author: "Your Name Here"
-date: "May 19, 2022"
+author: "Adeline Casali"
+date: "July 21, 2023"
 output: pdf_document
 ---
 
@@ -45,8 +45,21 @@ Only one valid answer exists.
 
 ```{r}
 two_sum <- function(nums_vector,target){
-  #your code here
-  
+ values_1 <- list() # Empty vector for answer
+ 
+ for(i in seq_along(nums_vector)) { 
+   # Loop through each value in nums_vector
+   for(j in seq_along(nums_vector)) { 
+     # Loop through each value in nums_vector again
+     if((i != j) && (nums_vector[i] + nums_vector[j] == target)) { 
+       # Check for when i and j are different and sum equals target
+       values_1 <- c(values_1, list(c(i, j)))
+       # If the condition is met, they get added to the values_1 vector
+     }
+   }
+ }
+ 
+ return(values_1) 
 }
 
 
@@ -70,9 +83,27 @@ Loop the array once to make a hash map of the value to its index. Then loop agai
 *A simple implementation uses two iterations. In the first iteration, we add each element's value as a key and its index as a value to the hash table. Then, in the second iteration, we check if each element's complement (target – nums_vector[i]) exists in the hash table. If it does exist, we return current element's index and its complement's index. Beware that the complement must not be nums_vector[i] itself!*
 
 ```{r}
+library(hash)
+
 two_sum <- function(nums_vector,target){
-  #your code here
+  values_2 <- list() # Empty vector for answer
+  hash_map <- hash() # Created hash map
   
+  for(i in nums_vector) {
+    j <- target - i 
+    # Iterate through each value in the vector and calculate the complement needed to 
+    # equal the target (j)
+    hash_map[[as.character(i)]] <- j
+    # Adds j as keys to the hash map
+    
+    if(j %in% keys(hash_map) && (i != j)) {
+      matching_pair_2 <- c(i, j)
+      values_2 <- c(values_2, list(matching_pair_2))
+    } # If the complement (j) is found in the hash map, then assign to matching_pair_2 
+    # and assign to values_2 
+  } 
+  
+  return(values_2)
 }
 
 
