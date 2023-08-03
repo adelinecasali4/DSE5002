@@ -17,6 +17,13 @@ head(salaries_df)
 
 summary(salaries_df)
 
+# Histogram of salaries in USD
+ggplot(salaries_df, aes(x = salary_in_usd)) +
+  geom_histogram(binwidth = 10000, fill = "purple", color = "white") +
+  labs(title = "Histogram of Salaries in USD", 
+       x = "Salary (USD)", y = "Frequency") + 
+  scale_x_continuous(labels = scales::comma_format())
+
 # Filter for only companies from the US
 salaries_df_us <- filter(salaries_df, company_location == "US")
 
@@ -208,6 +215,21 @@ ggplot(salaries_df_us, aes(x = location_type, y = salary_in_usd, fill = location
   scale_y_continuous(labels = scales::comma_format()) + 
   guides(fill = guide_legend(title = "Location Type"))
 
+# Filter for US companies hiring offshore vs in the US
+us_salaries_incountry <- salaries_df_us %>% 
+  filter(location_type == "US")
+
+us_salaries_offshore <- salaries_df_us %>% 
+  filter(location_type == "Offshore")
+
+# Run a t-test
+ttest_us_vs_offshore <- t.test(us_salaries_incountry$salary_in_usd, us_salaries_offshore$salary_in_usd)
+
+print(ttest_us_vs_offshore)
+
+# P-value less than significance level of 0.05, so there is a significant 
+# difference and it is less expensive to hire offshore. 
+
 
 # (7) Salary and remote work ratio --------------------------------------------
 
@@ -239,6 +261,25 @@ ggplot(salaries_df_us, aes(x = factor(remote_ratio), y = salary_in_usd)) +
        x = "Remote Work Ratio (%)", y = "Salary (USD)") + 
   scale_y_continuous(labels = scales::comma_format())
 
+# ANOVA test
+salaries_df_remote0 <- salaries_df_us %>% 
+  filter(remote_ratio == 0)
+salaries_df_remote50 <- salaries_df_us %>% 
+  filter(remote_ratio == 50)
+salaries_df_remote100 <- salaries_df_us %>% 
+  filter(remote_ratio == 100)
+
+salaries_df_remote_grouped <- bind_rows(
+  data.frame(salary_in_usd = salaries_df_remote0$salary_in_usd, group = "remote0"), 
+  data.frame(salary_in_usd = salaries_df_remote50$salary_in_usd, group = "remote50"), 
+  data.frame(salary_in_usd = salaries_df_remote100$salary_in_usd, group = "remote100"))
+
+anova_remote_ratio <- aov(salary_in_usd ~ group, data = salaries_df_remote_grouped)
+
+print(summary(anova_remote_ratio))
+
+# P-value of 0.459 is greater than the significance level of 0.05, so remote 
+# ratio is not going to be deciding factor for hiring and salary recommendations. 
 
 # (8) Salary and company size -------------------------------------------------
 
@@ -316,3 +357,17 @@ ggplot(salaries_df_filtered, aes(x = title_keywords, y = salary_in_usd)) +
   labs(title = "Data Science Salary by Position Title", 
        x = "Position Title", y = "Salary (USD)") + 
   scale_y_continuous(labels = scales::comma_format())
+
+# (10) Specific recommendations -------------------------------------------
+
+filtered_salaries_df <- salaries_df %>% 
+  filter(work_year == "2022", experience_level == "SE", employment_type == "FT", 
+         company_location == "US", company_size == "M")
+
+summary(filtered_salaries_df)
+
+# The most recent (2022) salaries of Senior/Expert level, Full-Time employees 
+# for US-based, medium sized companies shows a median of 136,300 USD. 
+# To be competitive, I would recommend this as a minimum, up to a maximum of 
+# the 3rd quartile boundary of 165,800 USD. 
+
