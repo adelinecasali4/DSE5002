@@ -17,22 +17,29 @@ head(salaries_df)
 
 summary(salaries_df)
 
+# Filter for only full-time employees
+salaries_df_ft <- salaries_df %>% 
+  filter(employment_type == "FT")
+
 # Histogram of salaries in USD
-ggplot(salaries_df, aes(x = salary_in_usd)) +
+ggplot(salaries_df_ft, aes(x = salary_in_usd)) +
   geom_histogram(binwidth = 10000, fill = "purple", color = "white") +
   labs(title = "Histogram of Salaries in USD", 
        x = "Salary (USD)", y = "Frequency") + 
   scale_x_continuous(labels = scales::comma_format())
 
 # Filter for only companies from the US
-salaries_df_us <- filter(salaries_df, company_location == "US")
+salaries_df_us <- salaries_df %>% 
+  filter(company_location == "US")
+salaries_df_ft_us <- salaries_df_ft %>% 
+  filter(company_location == "US")
 
-summary(salaries_df_us)
+summary(salaries_df_ft_us)
 
 # (3) Salary trends over time ----------------------------------------------
 
 # Create a df containing median salary and IQR for each year
-salaries_med_iqr <- salaries_df %>% 
+salaries_med_iqr <- salaries_df_ft %>% 
   group_by(work_year) %>% 
   summarize(median_salaries_usd = median(salary_in_usd), 
             q1 = quantile(salary_in_usd, 0.25), 
@@ -54,7 +61,7 @@ ggplot(salaries_med_iqr, aes(x = work_year)) +
        x = "Year", y = "Median Salary (USD)")
 
 # Create a df containing median salary and IQR for each year, US-based only
-salaries_med_iqr_us <- salaries_df_us %>% 
+salaries_med_iqr_us <- salaries_df_ft_us %>% 
   group_by(work_year) %>% 
   summarize(median_salaries_usd = median(salary_in_usd), 
             q1 = quantile(salary_in_usd, 0.25), 
@@ -62,18 +69,34 @@ salaries_med_iqr_us <- salaries_df_us %>%
 
 print(salaries_med_iqr_us)
 
-# Create the same plot but with only US-based companies
-ggplot(salaries_med_iqr_us, aes(x = work_year)) + 
+# Create the same plot but with only US-based companies, and add a linear model
+# Perform linear regression
+lm_model <- lm(median_salaries_usd ~ work_year, data = salaries_med_iqr_us)
+
+# Get R-squared
+r_squared <- paste0(format(summary(lm_model)$r.squared, digits = 3))
+
+# Get equation of the line
+intercept <- formatC(coef(lm_model)[1], format = "f", digits = 2)
+slope <- coef(lm_model)[2]
+equation <- paste0("y = ", format(slope, digits = 2), "x + ", format(intercept, digits = 2))
+
+# Create the plot
+ggplot(salaries_med_iqr_us, aes(x = work_year, y = median_salaries_usd)) + 
   geom_line(aes(y = median_salaries_usd), color = "blue") + 
   geom_ribbon(aes(ymin = q1, ymax = q3), 
               fill = "lightblue", alpha = 0.5) + 
   geom_point(aes(y = median_salaries_usd), color = "blue", size = 1) + 
+  geom_smooth(method = "lm", se = FALSE, color = "red", linetype = "dashed") + 
   scale_y_continuous(labels = scales::comma_format(), limits = c(40000, 200000)) + 
   scale_x_continuous(breaks = as.numeric(unique(salaries_med_iqr_us$work_year)), 
                      labels = c("2020", "2021", "2022")) + 
-  labs(title = "Median Data Science Salary (USD) over 2020 - 2022, US-based companies", 
-       subtitle = "Shaded area represents interquartile range (Q1 to Q3)", 
+  labs(title = "Median Data Science Salary (USD) over 2020 - 2022, US-based companies",
+       subtitle = paste("Equation:", equation, "\n", "R-squared:", r_squared),
        x = "Year", y = "Median Salary (USD)")
+
+# Based on extrapolation from the linear model, the median salary for a data
+# scientist in 2023 will be roughly 156,000. 
 
 
 # (4) Salary differences by experience level ------------------------------
@@ -85,11 +108,11 @@ exper_legend <- c("EN" = "Entry-level / Junior",
                    "EX" = "Executive-level / Director")
 
 # Order the levels of experience_level
-salaries_df$experience_level <- factor(salaries_df$experience_level, 
+salaries_df_ft$experience_level <- factor(salaries_df_ft$experience_level, 
                                        levels = c("EN", "MI", "SE", "EX"))
 
 # Group by experience_level and calculate average salary for each level
-average_salary_per_level <- salaries_df %>%
+average_salary_per_level <- salaries_df_ft %>%
   group_by(experience_level) %>%
   summarise(average_salary = mean(salary_in_usd))
 
@@ -97,7 +120,7 @@ average_salary_per_level <- salaries_df %>%
 print(average_salary_per_level)
 
 # Create the plot
-ggplot(salaries_df, aes(x = experience_level, y = salary_in_usd, 
+ggplot(salaries_df_ft, aes(x = experience_level, y = salary_in_usd, 
                         fill = experience_level)) + 
   geom_boxplot() + 
   scale_y_continuous(labels = scales::comma_format()) + 
@@ -108,16 +131,16 @@ ggplot(salaries_df, aes(x = experience_level, y = salary_in_usd,
   guides(fill = guide_legend(title = "Experience Level Descriptions"))
 
 # Create the same plot but for US-based companies only
-salaries_df_us$experience_level <- factor(salaries_df_us$experience_level, 
+salaries_df_ft_us$experience_level <- factor(salaries_df_ft_us$experience_level, 
                                        levels = c("EN", "MI", "SE", "EX"))
 
-average_salary_per_level_us <- salaries_df_us %>%
+average_salary_per_level_us <- salaries_df_ft_us %>%
   group_by(experience_level) %>%
   summarise(average_salary = mean(salary_in_usd))
 
 print(average_salary_per_level_us)
 
-ggplot(salaries_df_us, aes(x = experience_level, y = salary_in_usd, 
+ggplot(salaries_df_ft_us, aes(x = experience_level, y = salary_in_usd, 
                         fill = experience_level)) + 
   geom_boxplot() + 
   scale_y_continuous(labels = scales::comma_format()) + 
@@ -181,10 +204,10 @@ ggplot(salaries_df_us, aes(x = employment_type, y = salary_in_usd, fill = employ
 # (6) Salary comparison between offshore and the United States ----------------
 
 # Create location_type column based on whether the position is US or Offshore
-salaries_df$location_type <- ifelse(salaries_df$employee_residence == "US", "US", "Offshore")
+salaries_df_ft$location_type <- ifelse(salaries_df_ft$employee_residence == "US", "US", "Offshore")
 
 # Group by location type and calculate average salary for each level
-average_salary_per_location <- salaries_df %>%
+average_salary_per_location <- salaries_df_ft %>%
   group_by(location_type) %>%
   summarise(average_salary = mean(salary_in_usd))
 
@@ -192,7 +215,7 @@ average_salary_per_location <- salaries_df %>%
 print(average_salary_per_location)
 
 # Create the plot
-ggplot(salaries_df, aes(x = location_type, y = salary_in_usd, fill = location_type)) + 
+ggplot(salaries_df_ft, aes(x = location_type, y = salary_in_usd, fill = location_type)) + 
   geom_boxplot() + 
   labs(title = "Data Science Salary Comparison - Offshore vs. US, all companies", 
        x = "Employee Residence", y = "Salary (USD)") + 
@@ -200,15 +223,15 @@ ggplot(salaries_df, aes(x = location_type, y = salary_in_usd, fill = location_ty
   guides(fill = guide_legend(title = "Location Type"))
 
 # Create the same plot but with only US-based companies
-salaries_df_us$location_type <- ifelse(salaries_df_us$employee_residence == "US", "US", "Offshore")
+salaries_df_ft_us$location_type <- ifelse(salaries_df_ft_us$employee_residence == "US", "US", "Offshore")
 
-average_salary_per_location_us <- salaries_df_us %>%
+average_salary_per_location_us <- salaries_df_ft_us %>%
   group_by(location_type) %>%
   summarise(average_salary = mean(salary_in_usd))
 
 print(average_salary_per_location_us)
 
-ggplot(salaries_df_us, aes(x = location_type, y = salary_in_usd, fill = location_type)) + 
+ggplot(salaries_df_ft_us, aes(x = location_type, y = salary_in_usd, fill = location_type)) + 
   geom_boxplot() + 
   labs(title = "Data Science Salary Comparison - Offshore vs. US, US-based companies only", 
        x = "Employee Residence", y = "Salary (USD)") + 
@@ -216,10 +239,10 @@ ggplot(salaries_df_us, aes(x = location_type, y = salary_in_usd, fill = location
   guides(fill = guide_legend(title = "Location Type"))
 
 # Filter for US companies hiring offshore vs in the US
-us_salaries_incountry <- salaries_df_us %>% 
+us_salaries_incountry <- salaries_df_ft_us %>% 
   filter(location_type == "US")
 
-us_salaries_offshore <- salaries_df_us %>% 
+us_salaries_offshore <- salaries_df_ft_us %>% 
   filter(location_type == "Offshore")
 
 # Run a t-test
@@ -234,7 +257,7 @@ print(ttest_us_vs_offshore)
 # (7) Salary and remote work ratio --------------------------------------------
 
 # Group by remote_ratio and calculate average salary for each level
-average_salary_per_remote <- salaries_df %>%
+average_salary_per_remote <- salaries_df_ft %>%
   group_by(factor(remote_ratio)) %>%
   summarise(average_salary = mean(salary_in_usd))
 
@@ -242,31 +265,31 @@ average_salary_per_remote <- salaries_df %>%
 print(average_salary_per_remote)
 
 # Create the plot
-ggplot(salaries_df, aes(x = factor(remote_ratio), y = salary_in_usd)) + 
+ggplot(salaries_df_ft, aes(x = factor(remote_ratio), y = salary_in_usd)) + 
   geom_boxplot() + 
   labs(title = "Salary and Remote Work Ratio, all companies", 
        x = "Remote Work Ratio (%)", y = "Salary (USD)") + 
   scale_y_continuous(labels = scales::comma_format())
 
 # Create the same plot but for US-based companies only
-average_salary_per_remote_us <- salaries_df_us %>%
+average_salary_per_remote_us <- salaries_df_ft_us %>%
   group_by(factor(remote_ratio)) %>%
   summarise(average_salary = mean(salary_in_usd))
 
 print(average_salary_per_remote_us)
 
-ggplot(salaries_df_us, aes(x = factor(remote_ratio), y = salary_in_usd)) + 
+ggplot(salaries_df_ft_us, aes(x = factor(remote_ratio), y = salary_in_usd)) + 
   geom_boxplot() + 
   labs(title = "Salary and Remote Work Ratio, US-based companies", 
        x = "Remote Work Ratio (%)", y = "Salary (USD)") + 
   scale_y_continuous(labels = scales::comma_format())
 
 # ANOVA test
-salaries_df_remote0 <- salaries_df_us %>% 
+salaries_df_remote0 <- salaries_df_ft_us %>% 
   filter(remote_ratio == 0)
-salaries_df_remote50 <- salaries_df_us %>% 
+salaries_df_remote50 <- salaries_df_ft_us %>% 
   filter(remote_ratio == 50)
-salaries_df_remote100 <- salaries_df_us %>% 
+salaries_df_remote100 <- salaries_df_ft_us %>% 
   filter(remote_ratio == 100)
 
 salaries_df_remote_grouped <- bind_rows(
@@ -278,17 +301,17 @@ anova_remote_ratio <- aov(salary_in_usd ~ group, data = salaries_df_remote_group
 
 print(summary(anova_remote_ratio))
 
-# P-value of 0.459 is greater than the significance level of 0.05, so remote 
+# P-value of 0.481 is greater than the significance level of 0.05, so remote 
 # ratio is not going to be deciding factor for hiring and salary recommendations. 
 
 # (8) Salary and company size -------------------------------------------------
 
 # Order S, M, L companies
-salaries_df$company_size <- factor(salaries_df$company_size, 
+salaries_df_ft$company_size <- factor(salaries_df_ft$company_size, 
                                    levels = c("S", "M", "L"))
 
 # Group by company size and calculate average salary for each level
-average_salary_per_size <- salaries_df %>%
+average_salary_per_size <- salaries_df_ft %>%
   group_by(company_size) %>%
   summarise(average_salary = mean(salary_in_usd))
 
@@ -296,23 +319,23 @@ average_salary_per_size <- salaries_df %>%
 print(average_salary_per_size)
 
 # Create the plot
-ggplot(salaries_df, aes(x = company_size, y = salary_in_usd)) + 
+ggplot(salaries_df_ft, aes(x = company_size, y = salary_in_usd)) + 
   geom_boxplot() + 
   labs(title = "Data Science Salary by Company Size, all companies", 
        x = "Company Size", y = "Salary (USD)") + 
   scale_y_continuous(labels = scales::comma_format())
 
 # Create the same plot but for US-based companies only
-salaries_df_us$company_size <- factor(salaries_df_us$company_size, 
+salaries_df_ft_us$company_size <- factor(salaries_df_ft_us$company_size, 
                                       levels = c("S", "M", "L"))
 
-average_salary_per_size_us <- salaries_df_us %>%
+average_salary_per_size_us <- salaries_df_ft_us %>%
   group_by(company_size) %>%
   summarise(average_salary = mean(salary_in_usd))
 
 print(average_salary_per_size_us)
 
-ggplot(salaries_df_us, aes(x = company_size, y = salary_in_usd)) + 
+ggplot(salaries_df_ft_us, aes(x = company_size, y = salary_in_usd)) + 
   geom_boxplot() + 
   labs(title = "Data Science Salary by Company Size, US-based companies only", 
        x = "Company Size", y = "Salary (USD)") + 
@@ -336,11 +359,11 @@ extract_keyword <- function(title) {
 }
 
 # Mutate title_keywords using the custom function
-salaries_df <- salaries_df %>% 
+salaries_df_ft <- salaries_df_ft %>% 
   mutate(title_keywords = sapply(job_title, extract_keyword))
 
 # Filter rows where title_keywords is not "Other"
-salaries_df_filtered <- salaries_df %>% 
+salaries_df_filtered <- salaries_df_ft %>% 
   filter(title_keywords != "Other")
 
 # Group by title_keywords and calculate average salary for each level
@@ -366,7 +389,7 @@ filtered_salaries_df <- salaries_df %>%
 
 summary(filtered_salaries_df)
 
-# The most recent (2022) salaries of Senior/Expert level, Full-Time employees 
+# The most recent (2022) salaries of Senior/Expert level, Full-time employees 
 # for US-based, medium sized companies shows a median of 136,300 USD. 
 # To be competitive, I would recommend this as a minimum, up to a maximum of 
 # the 3rd quartile boundary of 165,800 USD. 
