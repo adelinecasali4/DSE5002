@@ -36,6 +36,14 @@ salaries_df_ft_us <- salaries_df_ft %>%
 
 summary(salaries_df_ft_us)
 
+# Create the same histogram as above but for FT employees only, from the US
+ggplot(salaries_df_ft_us, aes(x = salary_in_usd)) +
+  geom_histogram(binwidth = 10000, fill = "purple", color = "white") +
+  labs(title = "Histogram of Salaries in USD", 
+       subtitle = "US-based companies and full-time employees", 
+       x = "Salary (USD)", y = "Frequency") + 
+  scale_x_continuous(labels = scales::comma_format())
+
 # (3) Salary trends over time ----------------------------------------------
 
 # Create a df containing median salary and IQR for each year
@@ -91,12 +99,12 @@ ggplot(salaries_med_iqr_us, aes(x = work_year, y = median_salaries_usd)) +
   scale_y_continuous(labels = scales::comma_format(), limits = c(40000, 200000)) + 
   scale_x_continuous(breaks = as.numeric(unique(salaries_med_iqr_us$work_year)), 
                      labels = c("2020", "2021", "2022")) + 
-  labs(title = "Median Data Science Salary (USD) over 2020 - 2022, US-based companies",
-       subtitle = paste("Equation:", equation, "\n", "R-squared:", r_squared),
+  labs(title = "Median Data Science Salary (USD) over 2020 - 2022",
+       subtitle = paste("US-based companies", "\n", "Equation:", equation, "\n", "R-squared:", r_squared),
        x = "Year", y = "Median Salary (USD)")
 
 # Based on extrapolation from the linear model, the median salary for a data
-# scientist in 2023 will be roughly 156,000. 
+# scientist in 2023 will be roughly $156,000 USD. 
 
 
 # (4) Salary differences by experience level ------------------------------
@@ -112,12 +120,12 @@ salaries_df_ft$experience_level <- factor(salaries_df_ft$experience_level,
                                        levels = c("EN", "MI", "SE", "EX"))
 
 # Group by experience_level and calculate average salary for each level
-average_salary_per_level <- salaries_df_ft %>%
+median_salary_per_level <- salaries_df_ft %>%
   group_by(experience_level) %>%
-  summarise(average_salary = mean(salary_in_usd))
+  summarise(median_salary = median(salary_in_usd))
 
 # Print the table
-print(average_salary_per_level)
+print(median_salary_per_level)
 
 # Create the plot
 ggplot(salaries_df_ft, aes(x = experience_level, y = salary_in_usd, 
@@ -134,17 +142,18 @@ ggplot(salaries_df_ft, aes(x = experience_level, y = salary_in_usd,
 salaries_df_ft_us$experience_level <- factor(salaries_df_ft_us$experience_level, 
                                        levels = c("EN", "MI", "SE", "EX"))
 
-average_salary_per_level_us <- salaries_df_ft_us %>%
+median_salary_per_level_us <- salaries_df_ft_us %>%
   group_by(experience_level) %>%
-  summarise(average_salary = mean(salary_in_usd))
+  summarise(median_salary = median(salary_in_usd))
 
-print(average_salary_per_level_us)
+print(median_salary_per_level_us)
 
 ggplot(salaries_df_ft_us, aes(x = experience_level, y = salary_in_usd, 
                         fill = experience_level)) + 
   geom_boxplot() + 
   scale_y_continuous(labels = scales::comma_format()) + 
   labs(title = "Data Science Salary by Experience Level", 
+       subtitle = "US-based companies", 
        x = "Experience Level", y = "Salary (USD)") + 
   scale_fill_manual(values = c("EN" = "red", "MI" = "blue", "SE" = "green", "EX" = "purple"), 
                     labels = exper_legend) + 
@@ -233,7 +242,8 @@ print(average_salary_per_location_us)
 
 ggplot(salaries_df_ft_us, aes(x = location_type, y = salary_in_usd, fill = location_type)) + 
   geom_boxplot() + 
-  labs(title = "Data Science Salary Comparison - Offshore vs. US, US-based companies only", 
+  labs(title = "Data Science Salary Comparison - Offshore vs. US",
+       subtitle = "US-based companies", 
        x = "Employee Residence", y = "Salary (USD)") + 
   scale_y_continuous(labels = scales::comma_format()) + 
   guides(fill = guide_legend(title = "Location Type"))
@@ -382,15 +392,66 @@ ggplot(salaries_df_filtered, aes(x = title_keywords, y = salary_in_usd)) +
   scale_y_continuous(labels = scales::comma_format())
 
 # (10) Specific recommendations -------------------------------------------
-
-filtered_salaries_df <- salaries_df %>% 
+# Filter for most recent data, Senior/Expert level, Full-time employees 
+# for US-based, medium sized companies
+filtered_salaries_df_2022 <- salaries_df %>% 
   filter(work_year == "2022", experience_level == "SE", employment_type == "FT", 
+         company_location == "US", company_size == "M")
+
+summary(filtered_salaries_df_2022)
+
+# Filter for the same as above but all years and create linear model and plot
+# Filter the dataset like above but include all years
+filtered_salaries_df <- salaries_df %>% 
+  filter(experience_level == "SE", employment_type == "FT", 
          company_location == "US", company_size == "M")
 
 summary(filtered_salaries_df)
 
-# The most recent (2022) salaries of Senior/Expert level, Full-time employees 
-# for US-based, medium sized companies shows a median of 136,300 USD. 
-# To be competitive, I would recommend this as a minimum, up to a maximum of 
-# the 3rd quartile boundary of 165,800 USD. 
+# Create a df containing median salary and IQR for each year, filtered dataset
+filtered_salaries_med_iqr <- filtered_salaries_df %>% 
+  group_by(work_year) %>% 
+  summarize(median_salaries_usd = median(salary_in_usd), 
+            q1 = quantile(salary_in_usd, 0.25), 
+            q3 = quantile(salary_in_usd, 0.75))
+
+print(filtered_salaries_med_iqr)
+
+# Create a plot, and add a linear model
+# Perform linear regression
+filtered_lm_model <- lm(median_salaries_usd ~ work_year, data = filtered_salaries_med_iqr)
+
+# Get R-squared
+filtered_r_squared <- paste0(format(summary(filtered_lm_model)$r.squared, digits = 3))
+
+# Get equation of the line
+filtered_intercept <- formatC(coef(filtered_lm_model)[1], format = "f", digits = 2)
+filtered_slope <- coef(filtered_lm_model)[2]
+filtered_equation <- paste0("y = ", format(filtered_slope, digits = 2), "x + ", 
+                            format(filtered_intercept, digits = 2))
+
+# Create the plot
+ggplot(filtered_salaries_med_iqr, aes(x = work_year, y = median_salaries_usd)) + 
+  geom_line(aes(y = median_salaries_usd), color = "blue") + 
+  geom_ribbon(aes(ymin = q1, ymax = q3), 
+              fill = "lightblue", alpha = 0.5) + 
+  geom_point(aes(y = median_salaries_usd), color = "blue", size = 1) + 
+  geom_smooth(method = "lm", se = FALSE, color = "red", linetype = "dashed") + 
+  scale_y_continuous(labels = scales::comma_format(), limits = c(40000, 200000)) + 
+  scale_x_continuous(breaks = as.numeric(unique(filtered_salaries_med_iqr$work_year)), 
+                     labels = c("2020", "2021", "2022")) + 
+  labs(title = "Median Data Science Salary (USD) over 2020 - 2022",
+       subtitle = paste("Senior/Expert, full-time employees at medium-sized, US-based companies",
+                        "\n", "Equation:", filtered_equation, "\n", "R-squared:", filtered_r_squared), 
+       x = "Year", y = "Median Salary (USD)")
+
+# Based on extrapolation from the filtered linear model, the median salary for a
+# senior/expert level data scientist from a medium sized US based company in 
+# 2023 will be roughly $115,000 USD. This trend is decreasing, potentially due 
+# to market rebounding after COVID. 
+
+# Based on all of the above data, I would recommend a minimum salary of $140,000
+# (USD) up to a maximum of the 3rd quantile salary from 2022 of $169,000 (USD) 
+# in order to obtain the most competitive talent, capable of spearheading data
+# science in the company and leading a team in the future. 
 
